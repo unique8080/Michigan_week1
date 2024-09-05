@@ -1,52 +1,66 @@
 <?php
 session_start();
-
-if (!isset($_SESSION['name'])) {
-    die('Not logged in');
-}
-
 require_once "pdo.php";
 
-if ( isset($_POST['Delete']) && isset($_POST['profile_id']) ) {
-    echo 23132;
-    $sql = "DELETE FROM Profile WHERE profile_id = :zip";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(array(':zip' => $_POST['profile_id']));
-    $_SESSION['success'] = 'Record deleted';
-    header( 'Location: index.php' ) ;
+if (isset($_POST['cancel'])) {
+    // Redirect the browser to game.php
+    header("Location: index.php");
     return;
 }
 
-// Guardian: Make sure that user_id is present
-if ( ! isset($_GET['profile_id']) ) {
-    $_SESSION['error'] = "Missing user_id";
-    header('Location: index.php');
-    return;
-}
+$salt = 'XyZzy12*_';
+if (isset($_POST['pass']) && isset($_POST['email'])) {
+    $check = hash('md5', $salt . $_POST['pass']);
 
-$stmt = $pdo->prepare("SELECT first_name, last_name FROM Profile where profile_id = :xyz");
-$stmt->execute(array(":xyz" => $_GET['profile_id']));
-$row = $stmt->fetch(PDO::FETCH_ASSOC);
-if ( $row === false ) {
-    $_SESSION['error'] = 'Bad value for profile id';
-    header('Location: index.php');
-    return;
+    $stmt = $pdo->prepare('SELECT user_id, name FROM users WHERE email = :em AND password = :pw');
+
+    $stmt->execute(array(':em' => $_POST['email'], ':pw' => $check));
+
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row !== false) {
+
+        $_SESSION['name'] = $row['name'];
+
+        $_SESSION['user_id'] = $row['user_id'];
+
+// Redirect the browser to index.php
+
+        header("Location: index.php");
+
+        return;
+    }
+
+
+// Fall through into the View
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Welcome to Autos Database</title>
     <?php require_once "bootstrap.php"; ?>
+    <title>Welcome to Autos Database | Jared Best</title>
 </head>
 <body>
 <div class="container">
-    <p>First Name: <?php echo($row['first_name']); ?></p>
-    <p>Last Name: <?php echo($row['last_name']); ?></p>
-    <form method="post"><input type="hidden" name="profile_id" value="<?php echo $_GET['profile_id'] ?>">
-        <input type="submit" name="Delete" value="Delete">
-        <input type="submit" name="cancel" value="cancel">
+    <h1>Please Log In</h1>
+    <?php
+    if (isset($_SESSION['error'])) {
+        echo('<p style="color: red;">' . htmlentities($_SESSION['error']) . "</p>\n");
+        unset($_SESSION['error']);
+    }
+    ?>
+    <form method="POST" action="login.php">
+        User Name <input type="text" name="email"><br/>
+        Password <input type="text" name="pass"><br/>
+        <input type="submit" value="Log In">
+        <input type="submit" name="cancel" value="Cancel">
     </form>
+    <p>
+        For a password hint, view source and find a password hint
+        in the HTML comments.
+    </p>
 </div>
 </body>
+</html>
